@@ -1,0 +1,326 @@
+#!/usr/bin/php
+<?php
+/**
+ * @file
+ * Commit-message hook to check commit messages standards.
+ *
+ * Unfortunately, git does not allow to commit git hooks, so each developer
+ * has to install this separately.
+ *
+ * USAGE
+ * To use as a git hook (main usage):
+ * Name this file 'commit-msg' and place in '.git/hooks' directory of your
+ * project. The file needs to have executable permissions.
+ *
+ * To perform self testing, use
+ * php commit-msg SELFTEST
+ *
+ * To perform encoding of excluded words (useful for regeneration of list of
+ * swear words), use
+ * php commit-msg ENCODEWORDS comma,separated,list,of,words
+ *
+ * To perform decoding of excluded words, use
+ * php commit-msg DECODEWORDS encoded-list-of-words
+ */
+
+// Constants.
+define('DELIM_ISSUE_START', '[');
+define('DELIM_ISSUE_FINISH', ']');
+define('MESSAGE_START_WORDS', 'created,changed,reinstated,removed,moved,updated,deleted,added,fixed,closed,inserted,modified,appended,refactored');
+define('MESSAGE_EXCLUDED_WORDS', 'bobm-bovt-bstf-btt-cbmmtbdl-cbmmt-cbtubse-cjudi-cjbudi-cmppez-cmpxkpc-cmpx!kpc-cpmmpdl-cpmmpl-cpofs-cppc-cvhhfs-cvn-cvuu-cvuuqmvh-dmjupsjt-dpdl-dppo-dsbq-dvou-ebno-ejdl-ejmep-ezlf-gbh-gfdl-gfmmbuf-gfmmbujp-gfmdijoh-gvdl-g!v!d!l-gvdljoh-gvdlfe-gvdlfs-gvehfqbdlfs-gvehf!qbdlfs-gmbohf-Hpeebno-Hpe!ebno-ifmm-ipnp-kfsl-kj{{-lopcfoe-lopc!foe-mbcjb-mnbp-mngbp-nvgg-ojhhfs-ojhhb-pnh-qfojt-qjtt-qppq-qsjdl-qvcf-qvttz-rvffs-tdspuvn-tfy-tiju-t!iju-ti2u-tmvu-tnfhnb-tqvol-uju-upttfs-uvse-uxbu-wbhjob-xbol-xboljoh-xbolfs-xipsf-xug-uftutxfbsjoh');
+
+if ($argv[1] == 'SELFTEST') {
+  test();
+  exit(0);
+}
+elseif ($argv[1] == 'ENCODEWORDS') {
+  if (!isset($argv[2])) {
+    print 'Please specify a string of comma separated excluded words to encode';
+  }
+
+  print "\r\n" . excluded_words_encode(implode('', array_slice($argv, 2))) . "\r\n";
+  exit(0);
+}
+elseif ($argv[1] == 'DECODEWORDS') {
+  if (!isset($argv[2])) {
+    print 'Please specify a string of encoded excluded words to decode';
+  }
+
+  print "\r\n" . implode(', ', excluded_words_decode(implode('', array_slice($argv, 2)))) . "\r\n";
+  exit(0);
+}
+else {
+  $text = file_get_contents($argv[1]);
+}
+
+$message = checkMessage(rtrim($text));
+if (is_string($message)) {
+  print $message;
+  $code = 1;
+}
+else {
+  $code = 0;
+}
+
+exit($code);
+
+/**
+ * Commit message assessment functionality.
+ */
+function checkMessage($message) {
+  if (has_excluded_words($message)) {
+    return 'A commit must not contain any swearing words.';
+  }
+
+  // Contains issue number.
+  if (strpos($message, DELIM_ISSUE_START) === 0 || strpos($message, DELIM_ISSUE_FINISH) !== FALSE) {
+    if (strpos($message, DELIM_ISSUE_FINISH) === FALSE || (strpos($message, DELIM_ISSUE_START) !== 0 && strpos($message, DELIM_ISSUE_FINISH) !== FALSE)) {
+      return 'A commit with issue references should have them listed between ' . DELIM_ISSUE_START . ' and ' . DELIM_ISSUE_FINISH . '.';
+    }
+    $pos = strpos($message, DELIM_ISSUE_FINISH);
+    $issue = substr($message, 1, $pos - 1);
+    $message = substr($message, $pos + 1);
+
+    if (strpos($message, DELIM_ISSUE_START) !== FALSE || strpos($message, DELIM_ISSUE_FINISH) !== FALSE || strpos($issue, DELIM_ISSUE_START) !== FALSE || strpos($issue, DELIM_ISSUE_FINISH) !== FALSE) {
+      return 'A commit should contain only single block of issue references and it should be at the start.';
+    }
+
+    if (strpos($message, '  ') === 0 || strpos($message, ' ') !== 0) {
+      return 'A commit with issue reference should have exactly 1 space in between.';
+    }
+
+    $issue_pattern = '/^[A-Z]+(\-[0-9]+)*(,\s[A-Z]+(\-[0-9]+)*)*$/';
+    if (!preg_match($issue_pattern, $issue)) {
+      return 'A commit reference number should look like [ABC] or [ABC, DEF] or [ABC-123, ABC].';
+    }
+
+    $message = ltrim($message);
+  }
+
+  $sentences = split_sentences($message);
+  foreach ($sentences as $k => $sentence) {
+    $first_letter = substr($sentence, 0, 1);
+
+    // Starts from a non-letter.
+    if (!ctype_alpha($first_letter)) {
+      return 'A commit should start from a letter.';
+    }
+
+    // Starts from a capital letter.
+    if (is_lowercase($first_letter)) {
+      return 'A commit should start from a capital letter.';
+    }
+
+    $last_character = substr($sentence, -1, 1);
+    if (!in_array($last_character, array('.', '!'))) {
+      return 'A commit should have every sentence properly terminated.';
+    }
+
+    if ($k == 0) {
+      $split_words = split_words($sentence);
+      if (count($split_words) < 2) {
+        return "A commit should contain more that 1 word.";
+      }
+
+      if (!in_array(strtolower($split_words[0]), explode(',', MESSAGE_START_WORDS))) {
+        return 'A commit can start only from these words: ' . implode(', ', explode(',', MESSAGE_START_WORDS)) . '.';
+      }
+    }
+  }
+
+  return TRUE;
+}
+
+/**
+ * Perform testing of current functionality.
+ */
+function test() {
+  // Selftesting testing system.
+  assertTrue(TRUE, 'Assertion positive test.');
+  assertFalse(FALSE, 'Assertion negative test.');
+
+  // Unit tests for helpers.
+  // Test split_sentences.
+  $sentences = array(
+    'Simple sentence.',
+    'Simple sentence!',
+    'Simple sentence?',
+    'Simple sentence no. 4?!',
+    'Simple sentence...',
+    'Simple sentence',
+  );
+  $split_sentences = split_sentences(implode(' ', $sentences));
+  if (count($split_sentences) != count($sentences)) {
+    assertTrue(FALSE, 'Sentences are split correclty.');
+  }
+  else {
+    $correct = 0;
+    foreach ($sentences as $k => $sentence) {
+      $correct = $sentences[$k] == $split_sentences[$k] ? $correct + 1 : $correct;
+    }
+    assertEqual(count($sentences), $correct, 'Sentences are split correctly.');
+  }
+
+  // Test split_words.
+  $sentences = array(
+    'Simple sentence',
+    'Simple, sentence',
+    'Simple - sentence',
+  );
+  $correct = 0;
+  foreach ($sentences as $k => $sentence) {
+    $correct += (int) (count(split_words($sentence)) == 2);
+  }
+  assertEqual(count($sentences), $correct, 'Words in sentences are split correctly.');
+
+  assertTrue(is_lowercase('a'), 'Lowercase letter.');
+  assertFalse(is_uppercase('a'), 'Not uppercase letter.');
+  assertTrue(is_uppercase('A'), 'Uppercase letter.');
+  assertFalse(is_lowercase('A'), 'Not uppercase letter.');
+
+  assertEqual('list,of,words', implode(',', excluded_words_decode(excluded_words_encode('list,of,words'))), 'Encoding and decoding of list of offensive words');
+
+  print "\n";
+  // Possible commits formats.
+  // [PRJ-123] Verb in past ending with a dot at the end.
+  // [PRJ, PRJ-123] Verb in past ending with a dot at the end.
+  // [PRJ-321, PRJ-123] Verb in past ending with a dot at the end.
+  // [PRJ] Verb in past ending with a dot at the end.
+  // Verb in past ending with a dot at the end.
+  // Verb in past ending with a dot at the end. Another sentence with dot.
+  // Verbs are: added, implemented, fixed, removed, deleted, deployed.
+
+  // Prohibited words filter.
+  assertFalse(checkMessage('Inserted prohibited word testswearing.'), 'Declined: Prohibited word.');
+  assertFalse(checkMessage('Inserted prohibited uppercase word Testswearing.'), 'Declined: Prohibited uppercase word.');
+  assertTrue(checkMessage('Inserted prohibited word partial testswearinging.'), 'Accepted: Prohibited word as a part of another word.');
+
+  // First letter.
+  assertFalse(checkMessage('1 Inserted commit starting from non-letter.'), 'Declined: Starts with non-letter.');
+  assertFalse(checkMessage('! Inserted commit starting from non-letter.'), 'Declined: Starts with non-letter.');
+  assertFalse(checkMessage('inserted lowercase commit.'), 'Declined: Starts with lowercase.');
+  // Presence of issue reference.
+  assertTrue(checkMessage('[ABC] Inserted correct issue number.'), 'Accepted: Proper singular issue reference.');
+  assertFalse(checkMessage('[ABC Inserted issue reference should be properly terminated.'), 'Declined: Issue reference should be properly terminated.');
+  assertFalse(checkMessage('ABC] Inserted issue reference should be properly started.'), 'Declined: Issue reference should be properly started.');
+  assertFalse(checkMessage('[ABC][DEF] Inserted issue references should be referenced only once.'), 'Declined: Issue references should be referenced only once.');
+  assertFalse(checkMessage('[ABC]Inserted message with no spaces.'), 'Declined: There should be exactly 1 space between issue reference and commit message.');
+  assertFalse(checkMessage('[ABC]  Inserted message with no spaces.'), 'Declined: There should be exactly 1 space between issue reference and commit message.');
+  assertFalse(checkMessage('[abc] Inserted non-uppercase issue reference.'), 'Declined: Non-uppercase issue reference.');
+  // Issue reference validity.
+  assertFalse(checkMessage('[abc, ABC] Inserted multiple non-uppercase issue references.'), 'Declined: Multiple non-uppercase issue references - first.');
+  assertFalse(checkMessage('[ABC, abc] Inserted multiple non-uppercase issue references.'), 'Declined: Multiple non-uppercase issue references - second.');
+  assertFalse(checkMessage('[ABC,CDE] Inserted multiple issue references with no space in between.'), 'Declined: Multiple issue references with no space in between.');
+  assertFalse(checkMessage('[123-ABC] Inserted non-alpha staring issue references.'), 'Declined: Non-alpha staring issue references.');
+  assertTrue(checkMessage('[ABC-123, CDE-456, FGH, IJK-123] Inserted multiple valid issue references.'), 'Accepted: Multiple valid issue references.');
+  // Commit message.
+  assertTrue(checkMessage('[ABC] Inserted correct issue properly terminated.'), 'Accepted: Single properly terminated sentence.');
+  assertTrue(checkMessage('[ABC] Inserted asd.'), 'Accepted: Single properly terminated sentence.');
+  assertTrue(checkMessage('[ABC] Inserted correct issue number. And second properly terminated sentence.'), 'Accepted: Multiple properly terminated sentences.');
+  assertFalse(checkMessage('[ABC] Inserted correct issue number not properly terminated? And second properly terminated sentence.'), 'Declined: Multiple sentences terminated incorrectly in the middle.');
+  assertTrue(checkMessage('[ABC] Inserted correct commit starting with allowed starting word.'), 'Accepted: Correct commit starting with allowed starting word');
+  assertFalse(checkMessage('[ABC] Incorrect commit starting with a word that is not in allowed starting word list.'), 'Declined: Incorrect commit starting with a word outside of allowed starting word list.');
+  assertFalse(checkMessage('[ABC] Inserting incorrect commit starting with a partially allowed starting word.'), 'Declined: Incorrect commit starting with incorrect partially-allowed starting word.');
+  assertFalse(checkMessage('[ABC] Added.'), 'Declined: Incorrect commit with one word.');
+}
+
+/**
+ * Helper to check whether a text contains swear words.
+ */
+function has_excluded_words($txt) {
+  // Simple encryption to avoid praying eyes. Just substract 1 ASCII character
+  // number.
+  $words_decoded = excluded_words_decode(MESSAGE_EXCLUDED_WORDS);
+  $txt_parts = preg_split('/[,;\s\.\?\!]/', $txt);
+  $txt_parts = array_map('strtolower', $txt_parts);
+  $res = array_intersect($words_decoded, $txt_parts);
+
+  return (bool) !empty($res);
+}
+
+/**
+ * Helper to check that text is in uppercase.
+ */
+function is_uppercase($txt) {
+  return $txt == strtoupper($txt);
+}
+
+/**
+ * Helper to check that text is in lowercase.
+ */
+function is_lowercase($txt) {
+  return $txt == strtolower($txt);
+}
+
+/**
+ * Helper to split text into sentences.
+ */
+function split_sentences($txt) {
+  return preg_split('/(?<=[.?!])\s+(?=[a-z])/i', $txt);
+}
+
+/**
+ * Helper to split sentences into words.
+ */
+function split_words($txt) {
+  return preg_split('/\s\-\s|\s|,\s/', $txt);
+}
+
+/**
+ * Decode excluded words.
+ */
+function excluded_words_decode($txt) {
+  $words_decoded = '';
+  foreach (str_split($txt) as $l) {
+    $words_decoded .= chr(ord($l) - 1);
+  }
+
+  return explode(',', $words_decoded);
+}
+
+/**
+ * Encode excluded words.
+ */
+function excluded_words_encode($txt) {
+  $words_encoded = '';
+  foreach (str_split($txt) as $l) {
+    $words_encoded .= chr(ord($l) + 1);
+  }
+
+  return $words_encoded;
+}
+
+/**
+ * Equal assertion helper.
+ */
+function assertEqual($expected, $actual, $msg = '') {
+  printAssertResult($msg, $expected == $actual, $expected, $actual);
+}
+
+/**
+ * Boolean TRUE assertion helper.
+ */
+function assertTrue($actual, $msg = '') {
+  printAssertResult($msg, $actual === TRUE, TRUE, $actual);
+}
+
+/**
+ * Boolean FALSE assertion helper.
+ */
+function assertFalse($actual, $msg = '') {
+  printAssertResult($msg, $actual !== TRUE, FALSE, $actual);
+}
+
+/**
+ * Assertion result print helper.
+ */
+function printAssertResult($result, $passed, $expected, $actual) {
+  if ($passed) {
+    print "\033[0;32mPASSED\033[0m " . $result . "\n";
+  }
+  else {
+    print "\033[0;31mFAILED\033[0m " . $result . "\n";
+    print "  Expected: " . print_r($expected, TRUE) . "\n";
+    print "  Actual: " . print_r($actual, TRUE) . "\n";
+  }
+}
