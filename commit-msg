@@ -68,6 +68,10 @@ exit($code);
  * Commit message assessment functionality.
  */
 function checkMessage($message) {
+  // Split subject from body.
+  $message = explode("\n\n", $message);
+  $message = $message[0];
+
   if (has_excluded_words($message)) {
     return 'A commit must not contain any swearing words.';
   }
@@ -222,6 +226,8 @@ function test() {
   assertFalse(checkMessage('[ABC] Incorrect commit starting with a word that is not in allowed starting word list.'), 'Declined: Incorrect commit starting with a word outside of allowed starting word list.');
   assertFalse(checkMessage('[ABC] Inserting incorrect commit starting with a partially allowed starting word.'), 'Declined: Incorrect commit starting with incorrect partially-allowed starting word.');
   assertFalse(checkMessage('[ABC] Added.'), 'Declined: Incorrect commit with one word.');
+
+  assertTrue(checkMessage("Merged branch 'master' of git.australianindependentbusinessmedia.com.au:aibm_production into project/dtr.\n\nSome body with multiple lines\nAnother line without dot"), 'Accepted: Automerge commit message with body field.');
 }
 
 /**
