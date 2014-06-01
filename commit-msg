@@ -26,8 +26,10 @@
 // Constants.
 define('DELIM_ISSUE_START', '[');
 define('DELIM_ISSUE_FINISH', ']');
-define('MESSAGE_START_WORDS', 'created,changed,reinstated,removed,moved,updated,deleted,added,fixed,closed,inserted,modified,appended,refactored');
+define('MESSAGE_START_WORDS', 'created,changed,reinstated,removed,moved,updated,deleted,added,fixed,closed,inserted,modified,appended,refactored,merged');
 define('MESSAGE_EXCLUDED_WORDS', 'bobm-bovt-bstf-btt-cbmmtbdl-cbmmt-cbtubse-cjudi-cjbudi-cmppez-cmpxkpc-cmpx!kpc-cpmmpdl-cpmmpl-cpofs-cppc-cvhhfs-cvn-cvuu-cvuuqmvh-dmjupsjt-dpdl-dppo-dsbq-dvou-ebno-ejdl-ejmep-ezlf-gbh-gfdl-gfmmbuf-gfmmbujp-gfmdijoh-gvdl-g!v!d!l-gvdljoh-gvdlfe-gvdlfs-gvehfqbdlfs-gvehf!qbdlfs-gmbohf-Hpeebno-Hpe!ebno-ifmm-ipnp-kfsl-kj{{-lopcfoe-lopc!foe-mbcjb-mnbp-mngbp-nvgg-ojhhfs-ojhhb-pnh-qfojt-qjtt-qppq-qsjdl-qvcf-qvttz-rvffs-tdspuvn-tfy-tiju-t!iju-ti2u-tmvu-tnfhnb-tqvol-uju-upttfs-uvse-uxbu-wbhjob-xbol-xboljoh-xbolfs-xipsf-xug-uftutxfbsjoh');
+// Array of words to be used as an identifier of an automatic commit.
+define('MESSAGE_AUTO_WORDS', 'Merge branch');
 
 if ($argv[1] == 'SELFTEST') {
   test();
@@ -71,6 +73,11 @@ function checkMessage($message) {
   // Split subject from body.
   $message = explode("\n\n", $message);
   $message = $message[0];
+
+  // Any automatically generated commit must pass.
+  if (strpos($message, MESSAGE_AUTO_WORDS) !== FALSE) {
+    return TRUE;
+  }
 
   if (has_excluded_words($message)) {
     return 'A commit must not contain any swearing words.';
@@ -227,6 +234,8 @@ function test() {
   assertFalse(checkMessage('[ABC] Inserting incorrect commit starting with a partially allowed starting word.'), 'Declined: Incorrect commit starting with incorrect partially-allowed starting word.');
   assertFalse(checkMessage('[ABC] Added.'), 'Declined: Incorrect commit with one word.');
 
+  assertTrue(checkMessage("Merged branch 'master' of git.australianindependentbusinessmedia.com.au:aibm_production into project/dtr."), 'Accepted: Automerge commit message.');
+  assertTrue(checkMessage("Merged branch 'master' of git.australianindependentbusinessmedia.com.au:aibm_production into project/dtr."), 'Accepted: Automerge commit message without proper sentence termination.');
   assertTrue(checkMessage("Merged branch 'master' of git.australianindependentbusinessmedia.com.au:aibm_production into project/dtr.\n\nSome body with multiple lines\nAnother line without dot"), 'Accepted: Automerge commit message with body field.');
 }
 
