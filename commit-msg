@@ -26,7 +26,7 @@
 // Constants.
 define('DELIM_ISSUE_START', '[');
 define('DELIM_ISSUE_FINISH', ']');
-define('MESSAGE_START_WORDS', 'created,changed,reinstated,removed,moved,updated,upgraded,deleted,added,fixed,closed,inserted,modified,appended,refactored,merged,completed,changed,deprecated,reverted,enabled,disabled');
+define('MESSAGE_START_WORDS', 'created,changed,reinstated,removed,moved,updated,upgraded,deleted,added,fixed,closed,inserted,modified,appended,refactored,merged,completed,changed,deprecated,reverted,enabled,disabled,replaced,changed,renamed');
 define('MESSAGE_EXCLUDED_WORDS', 'bobm-bovt-bstf-btt-cbmmtbdl-cbmmt-cbtubse-cjudi-cjbudi-cmppez-cmpxkpc-cmpx!kpc-cpmmpdl-cpmmpl-cpofs-cppc-cvhhfs-cvn-cvuu-cvuuqmvh-dmjupsjt-dpdl-dppo-dsbq-dvou-ebno-ejdl-ejmep-ezlf-gbh-gfdl-gfmmbuf-gfmmbujp-gfmdijoh-gvdl-g!v!d!l-gvdljoh-gvdlfe-gvdlfs-gvehfqbdlfs-gvehf!qbdlfs-gmbohf-Hpeebno-Hpe!ebno-ifmm-ipnp-kfsl-kj{{-lopcfoe-lopc!foe-mbcjb-mnbp-mngbp-nvgg-ojhhfs-ojhhb-pnh-qfojt-qjtt-qppq-qsjdl-qvcf-qvttz-rvffs-tdspuvn-tfy-tiju-t!iju-ti2u-tmvu-tnfhnb-tqvol-uju-upttfs-uvse-uxbu-wbhjob-xbol-xboljoh-xbolfs-xipsf-xug-uftutxfbsjoh');
 // Array of words to be used as an identifier of an automatic commit.
 define('MESSAGE_AUTO_WORDS', 'Merge branch,Merge remote-tracking');
