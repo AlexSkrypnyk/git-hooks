@@ -18,6 +18,7 @@ Possible commit formats:
 * Verb in the past tense ending with a dot at the end. Another sentence with a dot.
 
 ## Installing
-curl -O -s https://raw.githubusercontent.com/alexdesignworks/git-hooks/master/commit-msg | php commit-msg INSTALL && rm commit-msg
+Run from directory where hook needs to be installed:
+`curl -O -s https://raw.githubusercontent.com/alexdesignworks/git-hooks/master/commit-msg | php commit-msg INSTALL && rm commit-msg`
 
 Or manually check out this repo and run `php commit-msg INSTALL`.
