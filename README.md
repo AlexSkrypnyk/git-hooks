@@ -5,12 +5,12 @@ commit-msg
 ----------
 Allows to reject incorrectly formatted commit messages. 
 
-Shipped with self testing functionality to ease custom rules development.
+Shipped with self testing functionality to ease custom rule development.
 
-Possible commits formats:
-* [PRJ-123] Verb in past ending with a dot at the end.
-* [PRJ, PRJ-123] Verb in past ending with a dot at the end.
-* [PRJ-321, PRJ-123] Verb in past ending with a dot at the end.
-* [PRJ] Verb in past ending with a dot at the end.
-* Verb in past ending with a dot at the end.
-* Verb in past ending with a dot at the end. Another sentence with dot.
+Possible commit formats:
+* [PRJ-123] Verb in the past tense ending with a dot at the end.
+* [PRJ, PRJ-123] Verb in the past tense ending with a dot at the end.
+* [PRJ-321, PRJ-123] Verb in the past tense ending with a dot at the end.
+* [PRJ] Verb in the past tense ending with a dot at the end.
+* Verb in the past tense ending with a dot at the end.
+* Verb in the past tense ending with a dot at the end. Another sentence with a dot.
