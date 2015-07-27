@@ -18,53 +18,93 @@
  * To perform encoding of excluded words (useful for regeneration of list of
  * swear words), use
  * php commit-msg ENCODEWORDS comma,separated,list,of,words
+ * The result needs to be used as a replacement for MESSAGE_EXCLUDED_WORDS
+ * constant value.
  *
  * To perform decoding of excluded words, use
  * php commit-msg DECODEWORDS encoded-list-of-words
  */
 
 // Constants.
+//
+// Commands.
+define('COMMAND_TEST', 'SELFTEST');
+define('COMMAND_ENCODE_WORDS', 'ENCODEWORDS');
+define('COMMAND_DECODE_WORDS', 'DECODEWORDS');
+// Delimiters.
 define('DELIM_ISSUE_START', '[');
 define('DELIM_ISSUE_FINISH', ']');
+// Messages.
 define('MESSAGE_START_WORDS', 'created,changed,reinstated,removed,moved,updated,upgraded,deleted,added,fixed,closed,inserted,modified,appended,refactored,merged,completed,changed,deprecated,reverted,enabled,disabled,replaced,changed,renamed');
-define('MESSAGE_EXCLUDED_WORDS', 'bobm-bovt-bstf-btt-cbmmtbdl-cbmmt-cbtubse-cjudi-cjbudi-cmppez-cmpxkpc-cmpx!kpc-cpmmpdl-cpmmpl-cpofs-cppc-cvhhfs-cvn-cvuu-cvuuqmvh-dmjupsjt-dpdl-dppo-dsbq-dvou-ebno-ejdl-ejmep-ezlf-gbh-gfdl-gfmmbuf-gfmmbujp-gfmdijoh-gvdl-g!v!d!l-gvdljoh-gvdlfe-gvdlfs-gvehfqbdlfs-gvehf!qbdlfs-gmbohf-Hpeebno-Hpe!ebno-ifmm-ipnp-kfsl-kj{{-lopcfoe-lopc!foe-mbcjb-mnbp-mngbp-nvgg-ojhhfs-ojhhb-pnh-qfojt-qjtt-qppq-qsjdl-qvcf-qvttz-rvffs-tdspuvn-tfy-tiju-t!iju-ti2u-tmvu-tnfhnb-tqvol-uju-upttfs-uvse-uxbu-wbhjob-xbol-xboljoh-xbolfs-xipsf-xug-uftutxfbsjoh');
+// Encoded words, including curse words. Encoded for a purpose of appropriate
+// code hosting.
+define('MESSAGE_EXCLUDED_WORDS', 'bobm-bovt-bstf-btt-cbmmtbdl-cbmmt-cbtubse-cjudi-cjbudi-cmppez-cmpxkpc-cmpx.kpc-cmpx\`kpc-cpmmpdl-cpmmpl-cpofs-cppc-cvhhfs-cvn-cvuu-cvuuqmvh-dmjupsjt-dpdl-dppo-dsbq-dvou-ebno-ejdl-ejmep-ezlf-gbh-gfdl-gfmmbuf-gfmmbujp-gfmdijoh-gvdl-g\!v\!d\!l-gvdljoh-gvdlfe-gvdlfs-gvehfqbdlfs-gvehf.qbdlfs-gmbohf-hpeebno-hpe.ebno-hpe\!ebno-ifmm-ipnp-kfsl-kj\{\{-lopcfoe-lopc\`foe-lopc.foe-mbcjb-mnbp-mngbp-nvgg-ojhhfs-ojhhb-pnh-qfojt-qjtt-qppq-qsjdl-qvcf-qvttz-rvffs-tdspuvn-tfy-tiju-t.iju-ti2u-tmvu-tnfhnb-tqvol-uju-upttfs-uvse-uxbu-wbhjob-xbol-xboljoh-xbolfs-xipsf-xug-uftutxfbsjoh');
+//define('MESSAGE_EXCLUDED_WORDS', 'cmpx.kpc-cmpx\`kpc');
 // Array of words to be used as an identifier of an automatic commit.
 define('MESSAGE_AUTO_WORDS', 'Merge branch,Merge remote-tracking');
 
-if ($argv[1] == 'SELFTEST') {
-  test();
-  exit(0);
-}
-elseif ($argv[1] == 'ENCODEWORDS') {
-  if (!isset($argv[2])) {
-    print 'Please specify a string of comma separated excluded words to encode';
+exit(main($argv, $argc));
+
+/**
+ * Main script runner.
+ *
+ * @param array $argv
+ *   Array of arguments passed to script.
+ * @param int $argc
+ *  The number of arguments passed to script
+ *
+ * @return int
+ *   Exit code to return to calling process.
+ */
+function main($argv, $argc) {
+  if ($argv[1] == COMMAND_TEST) {
+    test();
+
+    return 0;
+  }
+  elseif ($argv[1] == COMMAND_ENCODE_WORDS) {
+    if (!isset($argv[2])) {
+      print 'Please specify a string of comma separated excluded words to encode';
+
+      return 0;
+    }
+
+    print "\r\n" . excluded_words_encode(str_replace(', ', ',', implode(' ', array_slice($argv, 2)))) . "\r\n";
+
+    return 0;
+  }
+  elseif ($argv[1] == COMMAND_DECODE_WORDS) {
+    if (!isset($argv[2])) {
+      print 'Please specify a string of encoded excluded words to decode';
+
+      return 0;
+    }
+
+    print "\r\n" . implode(', ', excluded_words_decode(implode('', array_slice($argv, 2)))) . "\r\n";
+
+    return 0;
+  }
+  else {
+    if (!file_exists($argv[1])) {
+      print 'Unable to open a file ' . implode(' ', array_slice($argv, 1)) . "\n";
+
+      return 0;
+    }
+
+    $text = file_get_contents($argv[1]);
   }
 
-  print "\r\n" . excluded_words_encode(implode('', array_slice($argv, 2))) . "\r\n";
-  exit(0);
-}
-elseif ($argv[1] == 'DECODEWORDS') {
-  if (!isset($argv[2])) {
-    print 'Please specify a string of encoded excluded words to decode';
+  $message = checkMessage(rtrim($text));
+  if (is_string($message)) {
+    print $message;
+    $code = 1;
+  }
+  else {
+    $code = 0;
   }
 
-  print "\r\n" . implode(', ', excluded_words_decode(implode('', array_slice($argv, 2)))) . "\r\n";
-  exit(0);
+  return $code;
 }
-else {
-  $text = file_get_contents($argv[1]);
-}
-
-$message = checkMessage(rtrim($text));
-if (is_string($message)) {
-  print $message;
-  $code = 1;
-}
-else {
-  $code = 0;
-}
-
-exit($code);
 
 /**
  * Commit message assessment functionality.
@@ -145,6 +185,14 @@ function checkMessage($message) {
   return TRUE;
 }
 
+function mb_strcasecmp($str1, $str2, $encoding = NULL) {
+  if (NULL === $encoding) {
+    $encoding = mb_internal_encoding();
+  }
+
+  return strcmp(mb_strtoupper($str1, $encoding), mb_strtoupper($str2, $encoding));
+}
+
 /**
  * Perform testing of current functionality.
  */
@@ -195,7 +243,8 @@ function test() {
   assertEqual('list,of,words', implode(',', excluded_words_decode(excluded_words_encode('list,of,words'))), 'Encoding and decoding of list of offensive words');
 
   print "\n";
-  // Possible commits formats.
+
+  // Possible commit formats.
   // [PRJ-123] Verb in past ending with a dot at the end.
   // [PRJ, PRJ-123] Verb in past ending with a dot at the end.
   // [PRJ-321, PRJ-123] Verb in past ending with a dot at the end.
@@ -208,6 +257,13 @@ function test() {
   assertFalse(checkMessage('Inserted prohibited word testswearing.'), 'Declined: Prohibited word.');
   assertFalse(checkMessage('Inserted prohibited uppercase word Testswearing.'), 'Declined: Prohibited uppercase word.');
   assertTrue(checkMessage('Inserted prohibited word partial testswearinging.'), 'Accepted: Prohibited word as a part of another word.');
+
+  // Test double conversion of prohibited words.
+  $decoded_words = shell_exec('php ' . __FILE__ . ' ' . COMMAND_DECODE_WORDS . ' ' . MESSAGE_EXCLUDED_WORDS);
+  $decoded_words = trim($decoded_words);
+  $encoded_decoded_words = shell_exec('php ' . __FILE__ . ' ' . COMMAND_ENCODE_WORDS . ' ' . $decoded_words);
+  $encoded_decoded_words = trim($encoded_decoded_words);
+  assertTrue(MESSAGE_EXCLUDED_WORDS == $encoded_decoded_words, 'Encoding of decoded string equal to initial encoded string');
 
   // First letter.
   assertFalse(checkMessage('1 Inserted commit starting from non-letter.'), 'Declined: Starts with non-letter.');
@@ -303,7 +359,9 @@ function excluded_words_decode($txt) {
 function excluded_words_encode($txt) {
   $words_encoded = '';
   foreach (str_split($txt) as $l) {
-    $words_encoded .= chr(ord($l) + 1);
+    $l = chr(ord($l) + 1);
+    $l = $l == '!' ? '\!' : escapeshellcmd($l);
+    $words_encoded .= $l;
   }
 
   return $words_encoded;
