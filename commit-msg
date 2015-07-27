@@ -7,6 +7,12 @@
  * Unfortunately, git does not allow to commit git hooks, so each developer
  * has to install this separately.
  *
+ * INSTALLATION
+ * php commit-msg INSTALL
+ * to install into current dir
+ * php commit-msg INSTALL /path/to/git/root
+ * to install into specified path.
+ *
  * USAGE
  * To use as a git hook (main usage):
  * Name this file 'commit-msg' and place in '.git/hooks' directory of your
@@ -28,9 +34,13 @@
 // Constants.
 //
 // Commands.
+define('COMMAND_INSTALL', 'INSTALL');
 define('COMMAND_TEST', 'SELFTEST');
 define('COMMAND_ENCODE_WORDS', 'ENCODEWORDS');
 define('COMMAND_DECODE_WORDS', 'DECODEWORDS');
+// Return codes.
+define('RETURN_OK', 0);
+define('RETURN_ERROR', 1);
 // Delimiters.
 define('DELIM_ISSUE_START', '[');
 define('DELIM_ISSUE_FINISH', ']');
@@ -57,53 +67,89 @@ exit(main($argv, $argc));
  *   Exit code to return to calling process.
  */
 function main($argv, $argc) {
-  if ($argv[1] == COMMAND_TEST) {
-    test();
+  if ($argv[1] == COMMAND_INSTALL) {
+    if ($argv[2]) {
+      $dir = $argv[2];
+    }
+    else {
+      // Using current dir.
+      $dir = getcwd();
+    }
 
-    return 0;
+    return install($dir);
+  }
+  elseif ($argv[1] == COMMAND_TEST) {
+    return test();
   }
   elseif ($argv[1] == COMMAND_ENCODE_WORDS) {
     if (!isset($argv[2])) {
       print 'Please specify a string of comma separated excluded words to encode';
 
-      return 0;
+      return RETURN_ERROR;
     }
 
     print "\r\n" . excluded_words_encode(str_replace(', ', ',', implode(' ', array_slice($argv, 2)))) . "\r\n";
 
-    return 0;
+    return RETURN_OK;
   }
   elseif ($argv[1] == COMMAND_DECODE_WORDS) {
     if (!isset($argv[2])) {
       print 'Please specify a string of encoded excluded words to decode';
 
-      return 0;
+      return RETURN_ERROR;
     }
 
     print "\r\n" . implode(', ', excluded_words_decode(implode('', array_slice($argv, 2)))) . "\r\n";
 
-    return 0;
+    return RETURN_OK;
   }
   else {
     if (!file_exists($argv[1])) {
       print 'Unable to open a file ' . implode(' ', array_slice($argv, 1)) . "\n";
 
-      return 0;
+      return RETURN_ERROR;
     }
 
     $text = file_get_contents($argv[1]);
   }
 
-  $message = checkMessage(rtrim($text));
-  if (is_string($message)) {
-    print $message;
-    $code = 1;
+  $message_error = checkMessage(rtrim($text));
+  // If message error returned, print it and set a return code to RETURN_ERROR
+  // to stop this commit.
+  if (is_string($message_error)) {
+    print $message_error;
+    $code = RETURN_ERROR;
   }
   else {
-    $code = 0;
+    $code = RETURN_OK;
   }
 
   return $code;
+}
+
+/**
+ * Install this script into specified directory.
+ *
+ * @param string $dir
+ *   Directory to install this script.
+ */
+function install($dir) {
+  $git_dir = $dir . '/.git/hooks';
+  $dst = $git_dir . '/' . basename(__FILE__);
+  if (!file_exists($git_dir)) {
+    print "Specified directory " . $git_dir . " is not a git repository\n";
+
+    return RETURN_ERROR;
+  }
+
+  if (copy(__FILE__, $dst)) {
+    print "Successfully copied " . basename(__FILE__) . " file to " . basename($dst) . "\n";
+    chmod($dst, 0755);
+
+    return RETURN_OK;
+  }
+
+  return RETURN_ERROR;
 }
 
 /**
@@ -185,21 +231,13 @@ function checkMessage($message) {
   return TRUE;
 }
 
-function mb_strcasecmp($str1, $str2, $encoding = NULL) {
-  if (NULL === $encoding) {
-    $encoding = mb_internal_encoding();
-  }
-
-  return strcmp(mb_strtoupper($str1, $encoding), mb_strtoupper($str2, $encoding));
-}
-
 /**
  * Perform testing of current functionality.
  */
 function test() {
   // Selftesting testing system.
-  assertTrue(TRUE, 'Assertion positive test.');
-  assertFalse(FALSE, 'Assertion negative test.');
+  assert_true(TRUE, 'Assertion positive test.');
+  assert_false(FALSE, 'Assertion negative test.');
 
   // Unit tests for helpers.
   // Test split_sentences.
@@ -213,14 +251,14 @@ function test() {
   );
   $split_sentences = split_sentences(implode(' ', $sentences));
   if (count($split_sentences) != count($sentences)) {
-    assertTrue(FALSE, 'Sentences are split correclty.');
+    assert_true(FALSE, 'Sentences are split correclty.');
   }
   else {
     $correct = 0;
     foreach ($sentences as $k => $sentence) {
       $correct = $sentences[$k] == $split_sentences[$k] ? $correct + 1 : $correct;
     }
-    assertEqual(count($sentences), $correct, 'Sentences are split correctly.');
+    assert_equal(count($sentences), $correct, 'Sentences are split correctly.');
   }
 
   // Test split_words.
@@ -233,14 +271,14 @@ function test() {
   foreach ($sentences as $k => $sentence) {
     $correct += (int) (count(split_words($sentence)) == 2);
   }
-  assertEqual(count($sentences), $correct, 'Words in sentences are split correctly.');
+  assert_equal(count($sentences), $correct, 'Words in sentences are split correctly.');
 
-  assertTrue(is_lowercase('a'), 'Lowercase letter.');
-  assertFalse(is_uppercase('a'), 'Not uppercase letter.');
-  assertTrue(is_uppercase('A'), 'Uppercase letter.');
-  assertFalse(is_lowercase('A'), 'Not uppercase letter.');
+  assert_true(is_lowercase('a'), 'Lowercase letter.');
+  assert_false(is_uppercase('a'), 'Not uppercase letter.');
+  assert_true(is_uppercase('A'), 'Uppercase letter.');
+  assert_false(is_lowercase('A'), 'Not uppercase letter.');
 
-  assertEqual('list,of,words', implode(',', excluded_words_decode(excluded_words_encode('list,of,words'))), 'Encoding and decoding of list of offensive words');
+  assert_equal('list,of,words', implode(',', excluded_words_decode(excluded_words_encode('list,of,words'))), 'Encoding and decoding of list of offensive words');
 
   print "\n";
 
@@ -254,49 +292,51 @@ function test() {
   // Verbs are: added, implemented, fixed, removed, deleted, deployed.
 
   // Prohibited words filter.
-  assertFalse(checkMessage('Inserted prohibited word testswearing.'), 'Declined: Prohibited word.');
-  assertFalse(checkMessage('Inserted prohibited uppercase word Testswearing.'), 'Declined: Prohibited uppercase word.');
-  assertTrue(checkMessage('Inserted prohibited word partial testswearinging.'), 'Accepted: Prohibited word as a part of another word.');
+  assert_false(checkMessage('Inserted prohibited word testswearing.'), 'Declined: Prohibited word.');
+  assert_false(checkMessage('Inserted prohibited uppercase word Testswearing.'), 'Declined: Prohibited uppercase word.');
+  assert_true(checkMessage('Inserted prohibited word partial testswearinging.'), 'Accepted: Prohibited word as a part of another word.');
 
   // Test double conversion of prohibited words.
   $decoded_words = shell_exec('php ' . __FILE__ . ' ' . COMMAND_DECODE_WORDS . ' ' . MESSAGE_EXCLUDED_WORDS);
   $decoded_words = trim($decoded_words);
   $encoded_decoded_words = shell_exec('php ' . __FILE__ . ' ' . COMMAND_ENCODE_WORDS . ' ' . $decoded_words);
   $encoded_decoded_words = trim($encoded_decoded_words);
-  assertTrue(MESSAGE_EXCLUDED_WORDS == $encoded_decoded_words, 'Encoding of decoded string equal to initial encoded string');
+  assert_equal(MESSAGE_EXCLUDED_WORDS, $encoded_decoded_words, 'Encoding of decoded string equal to initial encoded string');
 
   // First letter.
-  assertFalse(checkMessage('1 Inserted commit starting from non-letter.'), 'Declined: Starts with non-letter.');
-  assertFalse(checkMessage('! Inserted commit starting from non-letter.'), 'Declined: Starts with non-letter.');
-  assertFalse(checkMessage('inserted lowercase commit.'), 'Declined: Starts with lowercase.');
+  assert_false(checkMessage('1 Inserted commit starting from non-letter.'), 'Declined: Starts with non-letter.');
+  assert_false(checkMessage('! Inserted commit starting from non-letter.'), 'Declined: Starts with non-letter.');
+  assert_false(checkMessage('inserted lowercase commit.'), 'Declined: Starts with lowercase.');
   // Presence of issue reference.
-  assertTrue(checkMessage('[ABC] Inserted correct issue number.'), 'Accepted: Proper singular issue reference.');
-  assertFalse(checkMessage('[ABC Inserted issue reference should be properly terminated.'), 'Declined: Issue reference should be properly terminated.');
-  assertFalse(checkMessage('ABC] Inserted issue reference should be properly started.'), 'Declined: Issue reference should be properly started.');
-  assertFalse(checkMessage('[ABC][DEF] Inserted issue references should be referenced only once.'), 'Declined: Issue references should be referenced only once.');
-  assertFalse(checkMessage('[ABC]Inserted message with no spaces.'), 'Declined: There should be exactly 1 space between issue reference and commit message.');
-  assertFalse(checkMessage('[ABC]  Inserted message with no spaces.'), 'Declined: There should be exactly 1 space between issue reference and commit message.');
-  assertFalse(checkMessage('[abc] Inserted non-uppercase issue reference.'), 'Declined: Non-uppercase issue reference.');
+  assert_true(checkMessage('[ABC] Inserted correct issue number.'), 'Accepted: Proper singular issue reference.');
+  assert_false(checkMessage('[ABC Inserted issue reference should be properly terminated.'), 'Declined: Issue reference should be properly terminated.');
+  assert_false(checkMessage('ABC] Inserted issue reference should be properly started.'), 'Declined: Issue reference should be properly started.');
+  assert_false(checkMessage('[ABC][DEF] Inserted issue references should be referenced only once.'), 'Declined: Issue references should be referenced only once.');
+  assert_false(checkMessage('[ABC]Inserted message with no spaces.'), 'Declined: There should be exactly 1 space between issue reference and commit message.');
+  assert_false(checkMessage('[ABC]  Inserted message with no spaces.'), 'Declined: There should be exactly 1 space between issue reference and commit message.');
+  assert_false(checkMessage('[abc] Inserted non-uppercase issue reference.'), 'Declined: Non-uppercase issue reference.');
   // Issue reference validity.
-  assertFalse(checkMessage('[abc, ABC] Inserted multiple non-uppercase issue references.'), 'Declined: Multiple non-uppercase issue references - first.');
-  assertFalse(checkMessage('[ABC, abc] Inserted multiple non-uppercase issue references.'), 'Declined: Multiple non-uppercase issue references - second.');
-  assertFalse(checkMessage('[ABC,CDE] Inserted multiple issue references with no space in between.'), 'Declined: Multiple issue references with no space in between.');
-  assertFalse(checkMessage('[123-ABC] Inserted non-alpha staring issue references.'), 'Declined: Non-alpha staring issue references.');
-  assertTrue(checkMessage('[ABC-123, CDE-456, FGH, IJK-123] Inserted multiple valid issue references.'), 'Accepted: Multiple valid issue references.');
+  assert_false(checkMessage('[abc, ABC] Inserted multiple non-uppercase issue references.'), 'Declined: Multiple non-uppercase issue references - first.');
+  assert_false(checkMessage('[ABC, abc] Inserted multiple non-uppercase issue references.'), 'Declined: Multiple non-uppercase issue references - second.');
+  assert_false(checkMessage('[ABC,CDE] Inserted multiple issue references with no space in between.'), 'Declined: Multiple issue references with no space in between.');
+  assert_false(checkMessage('[123-ABC] Inserted non-alpha staring issue references.'), 'Declined: Non-alpha staring issue references.');
+  assert_true(checkMessage('[ABC-123, CDE-456, FGH, IJK-123] Inserted multiple valid issue references.'), 'Accepted: Multiple valid issue references.');
   // Commit message.
-  assertTrue(checkMessage('[ABC] Inserted correct issue properly terminated.'), 'Accepted: Single properly terminated sentence.');
-  assertTrue(checkMessage('[ABC] Inserted asd.'), 'Accepted: Single properly terminated sentence.');
-  assertTrue(checkMessage('[ABC] Inserted correct issue number. And second properly terminated sentence.'), 'Accepted: Multiple properly terminated sentences.');
-  assertFalse(checkMessage('[ABC] Inserted correct issue number not properly terminated? And second properly terminated sentence.'), 'Declined: Multiple sentences terminated incorrectly in the middle.');
-  assertTrue(checkMessage('[ABC] Inserted correct commit starting with allowed starting word.'), 'Accepted: Correct commit starting with allowed starting word');
-  assertFalse(checkMessage('[ABC] Incorrect commit starting with a word that is not in allowed starting word list.'), 'Declined: Incorrect commit starting with a word outside of allowed starting word list.');
-  assertFalse(checkMessage('[ABC] Inserting incorrect commit starting with a partially allowed starting word.'), 'Declined: Incorrect commit starting with incorrect partially-allowed starting word.');
-  assertFalse(checkMessage('[ABC] Added.'), 'Declined: Incorrect commit with one word.');
+  assert_true(checkMessage('[ABC] Inserted correct issue properly terminated.'), 'Accepted: Single properly terminated sentence.');
+  assert_true(checkMessage('[ABC] Inserted asd.'), 'Accepted: Single properly terminated sentence.');
+  assert_true(checkMessage('[ABC] Inserted correct issue number. And second properly terminated sentence.'), 'Accepted: Multiple properly terminated sentences.');
+  assert_false(checkMessage('[ABC] Inserted correct issue number not properly terminated? And second properly terminated sentence.'), 'Declined: Multiple sentences terminated incorrectly in the middle.');
+  assert_true(checkMessage('[ABC] Inserted correct commit starting with allowed starting word.'), 'Accepted: Correct commit starting with allowed starting word');
+  assert_false(checkMessage('[ABC] Incorrect commit starting with a word that is not in allowed starting word list.'), 'Declined: Incorrect commit starting with a word outside of allowed starting word list.');
+  assert_false(checkMessage('[ABC] Inserting incorrect commit starting with a partially allowed starting word.'), 'Declined: Incorrect commit starting with incorrect partially-allowed starting word.');
+  assert_false(checkMessage('[ABC] Added.'), 'Declined: Incorrect commit with one word.');
 
-  assertTrue(checkMessage("Merged branch 'master' of something into branch-123."), 'Accepted: Automerge commit message.');
-  assertTrue(checkMessage("Merge remote-tracking branch 'branch-1'' into 'branch2'"), 'Accepted: Another automerge commit message.');
-  assertTrue(checkMessage("Merge branch 'master' of something into branch-123"), 'Accepted: Automerge commit message without proper sentence termination.');
-  assertTrue(checkMessage("Merged branch 'master' of something into branch-123.\n\nSome body with multiple lines\nAnother line without dot"), 'Accepted: Automerge commit message with body field.');
+  assert_true(checkMessage("Merged branch 'master' of something into branch-123."), 'Accepted: Automerge commit message.');
+  assert_true(checkMessage("Merge remote-tracking branch 'branch-1'' into 'branch2'"), 'Accepted: Another automerge commit message.');
+  assert_true(checkMessage("Merge branch 'master' of something into branch-123"), 'Accepted: Automerge commit message without proper sentence termination.');
+  assert_true(checkMessage("Merged branch 'master' of something into branch-123.\n\nSome body with multiple lines\nAnother line without dot"), 'Accepted: Automerge commit message with body field.');
+
+  return test_results();
 }
 
 /**
@@ -370,28 +410,28 @@ function excluded_words_encode($txt) {
 /**
  * Equal assertion helper.
  */
-function assertEqual($expected, $actual, $msg = '') {
-  printAssertResult($msg, $expected == $actual, $expected, $actual);
+function assert_equal($expected, $actual, $msg = '') {
+  return print_assert_result($msg, $expected == $actual, $expected, $actual);
 }
 
 /**
  * Boolean TRUE assertion helper.
  */
-function assertTrue($actual, $msg = '') {
-  printAssertResult($msg, $actual === TRUE, TRUE, $actual);
+function assert_true($actual, $msg = '') {
+  return print_assert_result($msg, $actual === TRUE, TRUE, $actual);
 }
 
 /**
  * Boolean FALSE assertion helper.
  */
-function assertFalse($actual, $msg = '') {
-  printAssertResult($msg, $actual !== TRUE, FALSE, $actual);
+function assert_false($actual, $msg = '') {
+  return print_assert_result($msg, $actual !== TRUE, FALSE, $actual);
 }
 
 /**
  * Assertion result print helper.
  */
-function printAssertResult($result, $passed, $expected, $actual) {
+function print_assert_result($result, $passed, $expected, $actual) {
   if ($passed) {
     print "\033[0;32mPASSED\033[0m " . $result . "\n";
   }
@@ -400,4 +440,28 @@ function printAssertResult($result, $passed, $expected, $actual) {
     print "  Expected: " . print_r($expected, TRUE) . "\n";
     print "  Actual: " . print_r($actual, TRUE) . "\n";
   }
+
+  set_assertion_result($passed);
+
+  return $passed;
+}
+
+/**
+ * Set global assertion result.
+ */
+function set_assertion_result($result) {
+  global $test_results;
+  if (!$test_results) {
+    $test_results = array();
+  }
+  $test_results[] = $result;
+}
+
+/**
+ * Returns TRUE if all assertion results have passed.
+ */
+function test_results() {
+  global $test_results;
+
+  return count($test_results) == count(array_filter($test_results));
 }
