@@ -68,7 +68,7 @@ exit(main($argv, $argc));
  */
 function main($argv, $argc) {
   if ($argv[1] == COMMAND_INSTALL) {
-    if ($argv[2]) {
+    if (isset($argv[2])) {
       $dir = $argv[2];
     }
     else {
