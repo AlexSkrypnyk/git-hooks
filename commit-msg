@@ -52,6 +52,8 @@ define('MESSAGE_EXCLUDED_WORDS', 'bobm-bovt-bstf-btt-cbmmtbdl-cbmmt-cbtubse-cjud
 //define('MESSAGE_EXCLUDED_WORDS', 'cmpx.kpc-cmpx\`kpc');
 // Array of words to be used as an identifier of an automatic commit.
 define('MESSAGE_AUTO_WORDS', 'Merge branch,Merge remote-tracking');
+//Comma-separated list of words allowed inside of the issue definition.
+define('MESSAGE_ALLOWED_ISSUE_WORDS', 'ci skip,skip ci');
 
 exit(main($argv, $argc));
 
@@ -189,9 +191,12 @@ function checkMessage($message) {
       return 'A commit with issue reference should have exactly 1 space in between.';
     }
 
-    $issue_pattern = '/^[A-Z]+(\-[0-9]+)*(,\s[A-Z]+(\-[0-9]+)*)*$/';
-    if (!preg_match($issue_pattern, $issue)) {
-      return 'A commit reference number should look like [ABC] or [ABC, DEF] or [ABC-123, ABC].';
+    $issue_parts = explode(', ', $issue);
+    foreach ($issue_parts as $issue_part) {
+      $issue_pattern = '/^(?:[A-Z]+(\-[0-9]+)*|' . implode('|', explode(',', MESSAGE_ALLOWED_ISSUE_WORDS)) . ')$/';
+      if (!preg_match($issue_pattern, $issue_part)) {
+        return 'A commit reference number should look like [ABC] or [ABC, DEF] or [ABC-123, ABC] or one of the allowed words: ' . implode(', ', explode(',', MESSAGE_ALLOWED_ISSUE_WORDS)) . '.';
+      }
     }
 
     $message = ltrim($message);
@@ -330,6 +335,13 @@ function test() {
   assert_false(checkMessage('[ABC] Incorrect commit starting with a word that is not in allowed starting word list.'), 'Declined: Incorrect commit starting with a word outside of allowed starting word list.');
   assert_false(checkMessage('[ABC] Inserting incorrect commit starting with a partially allowed starting word.'), 'Declined: Incorrect commit starting with incorrect partially-allowed starting word.');
   assert_false(checkMessage('[ABC] Added.'), 'Declined: Incorrect commit with one word.');
+
+  assert_true(checkMessage('[ci skip] Added a feature.'), 'Accepted: Correct issue additional word.');
+  assert_true(checkMessage('[skip ci] Added a feature.'), 'Accepted: Correct issue another additional word.');
+  assert_true(checkMessage('[ABC, ci skip] Added a feature.'), 'Accepted: Correct issue additional word with other issue.');
+  assert_true(checkMessage('[ABC-123, ci skip] Added a feature.'), 'Accepted: Correct issue additional word with other numbered issue.');
+  assert_true(checkMessage('[ABC, ABC-123, ci skip] Added a feature.'), 'Accepted: Correct issue additional word with issue and numbered issue.');
+  assert_true(checkMessage('[ci skip, ABC, ABC-123] Added a feature.'), 'Accepted: Correct issue additional word at the start with issue and numbered issue.');
 
   assert_true(checkMessage("Merged branch 'master' of something into branch-123."), 'Accepted: Automerge commit message.');
   assert_true(checkMessage("Merge remote-tracking branch 'branch-1'' into 'branch2'"), 'Accepted: Another automerge commit message.');
