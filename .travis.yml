@@ -13,6 +13,6 @@ script:
   # Test installation into specified directory.
   - "cd $HOME/git-test-path && $(which php) $TRAVIS_BUILD_DIR/commit-msg INSTALL $HOME/git-test-path && test $HOME/git-test-path/.git/hooks/commit-msg"
   # Test installation into specified directory from CURL.
-  - "cd $HOME/git-test-curl && $(which curl) -O -s https://raw.githubusercontent.com/alexdesignworks/git-hooks/master/commit-msg | php commit-msg INSTALL && rm commit-msg && test $HOME/git-test-curl/.git/hooks/commit-msg"
+  - "cd $HOME/git-test-curl && $(which curl) -O -s https://raw.githubusercontent.com/alexdesignworks/git-hooks/master/commit-msg && php commit-msg INSTALL && rm commit-msg && test $HOME/git-test-curl/.git/hooks/commit-msg"
   # Run unit tests.
   - $(which php) $TRAVIS_BUILD_DIR/commit-msg SELFTEST
