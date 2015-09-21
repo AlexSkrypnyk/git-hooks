@@ -19,6 +19,8 @@ Possible commit formats:
 
 ## Installing
 Run from directory where hook needs to be installed:
-`curl -O -s https://raw.githubusercontent.com/alexdesignworks/git-hooks/master/commit-msg && php commit-msg INSTALL && rm commit-msg`
+```
+curl -O -s https://raw.githubusercontent.com/alexdesignworks/git-hooks/master/commit-msg && php commit-msg INSTALL && rm commit-msg
+```
 
 Or manually check out this repo and run `php commit-msg INSTALL`.
