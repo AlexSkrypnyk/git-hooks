@@ -193,9 +193,9 @@ function checkMessage($message) {
 
     $issue_parts = explode(', ', $issue);
     foreach ($issue_parts as $issue_part) {
-      $issue_pattern = '/^(?:[A-Z]+(\-[0-9]+)*|' . implode('|', explode(',', MESSAGE_ALLOWED_ISSUE_WORDS)) . ')$/';
+      $issue_pattern = '/^(?:[A-Z0-9]+(\-[0-9]+)*|' . implode('|', explode(',', MESSAGE_ALLOWED_ISSUE_WORDS)) . ')$/';
       if (!preg_match($issue_pattern, $issue_part)) {
-        return 'A commit reference number should look like [ABC] or [ABC, DEF] or [ABC-123, ABC] or one of the allowed words: ' . implode(', ', explode(',', MESSAGE_ALLOWED_ISSUE_WORDS)) . '.';
+        return 'A commit reference number should look like [ABC] or [ABC, DEF] or [ABC-123, ABC123-456, ABC] or one of the allowed words: ' . implode(', ', explode(',', MESSAGE_ALLOWED_ISSUE_WORDS)) . '.';
       }
     }
 
@@ -321,6 +321,7 @@ function test() {
   assert_false(checkMessage('[ABC]  Inserted message with no spaces.'), 'Declined: There should be exactly 1 space between issue reference and commit message.');
   assert_false(checkMessage('[abc] Inserted non-uppercase issue reference.'), 'Declined: Non-uppercase issue reference.');
   // Issue reference validity.
+  assert_true(checkMessage('[ABC123-456] Inserted issue reference with digit in project name.'), 'Accepted: Digit in project name.');
   assert_false(checkMessage('[abc, ABC] Inserted multiple non-uppercase issue references.'), 'Declined: Multiple non-uppercase issue references - first.');
   assert_false(checkMessage('[ABC, abc] Inserted multiple non-uppercase issue references.'), 'Declined: Multiple non-uppercase issue references - second.');
   assert_false(checkMessage('[ABC,CDE] Inserted multiple issue references with no space in between.'), 'Declined: Multiple issue references with no space in between.');
