@@ -1,0 +1,30 @@
+machine:
+  php:
+    version: 5.6.2
+
+dependencies:
+  override:
+  # Remove all default packages.
+  - rm -rf ~/.composer
+  - composer global clear-cache
+  - "if [ \"$GITHUB_TOKEN\" != \"\" ]; then composer config -g github-oauth.github.com $GITHUB_TOKEN; fi"
+  # Install DCR.
+  - cd $HOME/$CIRCLE_PROJECT_REPONAME && composer require --no-interaction alexdesignworks/dcr
+  - cd $HOME/$CIRCLE_PROJECT_REPONAME && bash vendor/bin/dcr install
+
+test:
+  pre:
+  - "mkdir $HOME/git-test && cd $HOME/git-test && git init"
+  - "mkdir $HOME/git-test-path && cd $HOME/git-test-path && git init"
+  - "mkdir $HOME/git-test-curl && cd $HOME/git-test-curl && git init"
+  override:
+  # Lint code.
+  - "source ~/.profile && dcr $HOME/$CIRCLE_PROJECT_REPONAME/commit-msg"
+  # Test installation from current directory.
+  - "cd $HOME/git-test && $(which php) $HOME/$CIRCLE_PROJECT_REPONAME/commit-msg INSTALL && test $HOME/git-test/.git/hooks/commit-msg"
+  # Test installation into specified directory.
+  - "cd $HOME/git-test-path && $(which php) $HOME/$CIRCLE_PROJECT_REPONAME/commit-msg INSTALL $HOME/git-test-path && test $HOME/git-test-path/.git/hooks/commit-msg"
+  # Test installation into specified directory from CURL.
+  - "cd $HOME/git-test-curl && $(which curl) -O -s https://raw.githubusercontent.com/alexdesignworks/git-hooks/master/commit-msg && php commit-msg INSTALL && rm commit-msg && test $HOME/git-test-curl/.git/hooks/commit-msg"
+  # Run unit tests.
+  - "$(which php) $HOME/$CIRCLE_PROJECT_REPONAME/commit-msg SELFTEST"

@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/alexdesignworks/git-hooks.svg)](https://travis-ci.org/alexdesignworks/git-hooks)
+[![Circle CI](https://circleci.com/gh/alexdesignworks/git-hooks.svg?style=svg)](https://circleci.com/gh/alexdesignworks/git-hooks)
 
 Useful git hooks
 ================
