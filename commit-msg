@@ -217,7 +217,7 @@ function checkMessage($message) {
     }
 
     $last_character = substr($sentence, -1, 1);
-    if (!in_array($last_character, array('.', '!'))) {
+    if (!in_array($last_character, ['.', '!'])) {
       return 'A commit should have every sentence properly terminated.';
     }
 
@@ -246,14 +246,14 @@ function test() {
 
   // Unit tests for helpers.
   // Test split_sentences.
-  $sentences = array(
+  $sentences = [
     'Simple sentence.',
     'Simple sentence!',
     'Simple sentence?',
     'Simple sentence no. 4?!',
     'Simple sentence...',
     'Simple sentence',
-  );
+  ];
   $split_sentences = split_sentences(implode(' ', $sentences));
   if (count($split_sentences) != count($sentences)) {
     assert_true(FALSE, 'Sentences are split correclty.');
@@ -267,11 +267,11 @@ function test() {
   }
 
   // Test split_words.
-  $sentences = array(
+  $sentences = [
     'Simple sentence',
     'Simple, sentence',
     'Simple - sentence',
-  );
+  ];
   $correct = 0;
   foreach ($sentences as $k => $sentence) {
     $correct += (int) (count(split_words($sentence)) == 2);
@@ -465,7 +465,7 @@ function print_assert_result($result, $passed, $expected, $actual) {
 function set_assertion_result($result) {
   global $test_results;
   if (!$test_results) {
-    $test_results = array();
+    $test_results = [];
   }
   $test_results[] = $result;
 }
