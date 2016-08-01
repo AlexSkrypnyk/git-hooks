@@ -192,9 +192,9 @@ function check_message($message) {
 
     $issue_parts = explode(', ', $issue);
     foreach ($issue_parts as $issue_part) {
-      $issue_pattern = '/^(?:[A-Z0-9]+(\-[0-9]+)*|' . implode('|', explode(',', MESSAGE_ALLOWED_ISSUE_WORDS)) . ')$/';
+      $issue_pattern = '/^(?:([A-Z]+([0-9]+)*)(\-[0-9]+)*|\#[0-9]+|' . implode('|', explode(',', MESSAGE_ALLOWED_ISSUE_WORDS)) . ')$/';
       if (!preg_match($issue_pattern, $issue_part)) {
-        return 'A commit reference number should look like [ABC] or [ABC, DEF] or [ABC-123, ABC123-456, ABC] or one of the allowed words: ' . implode(', ', explode(',', MESSAGE_ALLOWED_ISSUE_WORDS)) . '.';
+        return 'A commit reference number should look like [ABC] or [ABC, DEF] or [ABC-123, ABC123-456, ABC] or [#123] or one of the allowed words: ' . implode(', ', explode(',', MESSAGE_ALLOWED_ISSUE_WORDS)) . '.';
       }
     }
 
@@ -326,6 +326,8 @@ function test() {
   assert_false(check_message('[ABC,CDE] Inserted multiple issue references with no space in between.'), 'Declined: Multiple issue references with no space in between.');
   assert_false(check_message('[123-ABC] Inserted non-alpha staring issue references.'), 'Declined: Non-alpha staring issue references.');
   assert_true(check_message('[ABC-123, CDE-456, FGH, IJK-123] Inserted multiple valid issue references.'), 'Accepted: Multiple valid issue references.');
+  assert_true(check_message('[#123] Inserted issue reference contains hash.'), 'Accepted: Issue reference with a hash.');
+  assert_false(check_message('[123] Inserted issue reference does not contain hash.'), 'Declined: Issue reference without a hash.');
   // Commit message.
   assert_true(check_message('[ABC] Inserted correct issue properly terminated.'), 'Accepted: Single properly terminated sentence.');
   assert_true(check_message('[ABC] Inserted asd.'), 'Accepted: Single properly terminated sentence.');
